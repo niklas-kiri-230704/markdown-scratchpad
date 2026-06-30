@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Markdown Scratchpad</title>
+<style>
+  :root{--bg:#0f1117;--bg-elev:#181b24;--bg-elev2:#1f2330;--border:#2a2f3d;--text:#e6e8ee;--text-dim:#9aa1b1;--accent:#6ea8fe;--accent-dim:#34406b;--good:#3fb950;--danger:#f85149;--code-bg:#0b0d13;--radius:10px;}
+  *{box-sizing:border-box;} html,body{margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);min-height:100vh;font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+  button{font:inherit;cursor:pointer;} input,textarea,select{font:inherit;}
+
+  header{position:sticky;top:0;z-index:20;background:rgba(15,17,23,.85);backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--border);padding:12px 18px;}
+  .bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+  .logo{font-weight:700;font-size:18px;letter-spacing:.3px;margin-right:4px;}
+  .logo span{color:var(--accent);}
+  .spacer{flex:1;}
+  .btn{background:var(--bg-elev2);border:1px solid var(--border);color:var(--text);
+    padding:9px 14px;border-radius:var(--radius);white-space:nowrap;}
+  .btn:hover{border-color:var(--accent);}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#08101f;font-weight:600;}
+  .btn.sm{padding:6px 10px;font-size:13px;}
+  .btn.ok{border-color:var(--good);color:var(--good);}
+  select.docsel{background:var(--bg-elev2);border:1px solid var(--border);color:var(--text);
+    padding:8px 10px;border-radius:var(--radius);max-width:200px;}
+  select.docsel:focus{outline:none;border-color:var(--accent);}
+
+  main{display:flex;height:calc(100vh - 60px);}
+  .pane{flex:1;min-width:0;display:flex;flex-direction:column;}
+  .pane.editor{border-right:1px solid var(--border);}
+  .panehead{display:flex;align-items:center;gap:8px;padding:6px 14px;font-size:12px;
+    text-transform:uppercase;letter-spacing:.6px;color:var(--text-dim);
+    border-bottom:1px solid var(--border);background:var(--bg-elev);}
+  .panehead .count{margin-left:auto;text-transform:none;letter-spacing:0;}
+  textarea#src{flex:1;width:100%;resize:none;border:0;outline:none;padding:16px;
+    background:var(--bg);color:var(--text);
+    font-family:"SF Mono","Cascadia Code",Consolas,monospace;font-size:14px;line-height:1.6;}
+  #preview{flex:1;overflow:auto;padding:16px 22px;}
+
+  /* rendered markdown */
+  #preview h1,#preview h2,#preview h3,#preview h4,#preview h5,#preview h6{
+    line-height:1.25;margin:1.2em 0 .5em;}
+  #preview h1{font-size:1.8em;border-bottom:1px solid var(--border);padding-bottom:.3em;}
+  #preview h2{font-size:1.45em;border-bottom:1px solid var(--border);padding-bottom:.25em;}
+  #preview h3{font-size:1.2em;} #preview h4{font-size:1.05em;}
+  #preview h5{font-size:.95em;} #preview h6{font-size:.85em;color:var(--text-dim);}
+  #preview p{margin:.6em 0;}
+  #preview a{color:var(--accent);}
+  #preview code{font-family:"SF Mono","Cascadia Code",Consolas,monospace;font-size:.9em;
+    background:var(--bg-elev2);padding:.15em .4em;border-radius:6px;}
+  #preview pre{background:var(--code-bg);border:1px solid var(--border);border-radius:8px;
+    padding:12px 14px;overflow:auto;}
+  #preview pre code{background:none;padding:0;font-size:.88em;line-height:1.5;}
+  #preview blockquote{margin:.6em 0;padding:.2em 1em;border-left:3px solid var(--accent-dim);
+    color:var(--text-dim);}
+  #preview ul,#preview ol{margin:.5em 0;padding-left:1.6em;}
+  #preview li{margin:.2em 0;}
+  #preview hr{border:0;border-top:1px solid var(--border);margin:1.2em 0;}
+  #preview img{max-width:100%;border-radius:8px;}
+  #preview table{border-collapse:collapse;margin:.6em 0;}
+  #preview th,#preview td{border:1px solid var(--border);padding:6px 10px;}
+  #preview .empty{color:var(--text-dim);font-style:italic;}
+
+  .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:var(--bg-elev2);border:1px solid var(--good);color:var(--text);
+    padding:9px 16px;border-radius:var(--radius);opacity:0;pointer-events:none;
+    transition:opacity .2s,transform .2s;z-index:50;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  .tabbar{display:none;}
+  @media (max-width:780px){
+    main{flex-direction:column;height:auto;}
+    .pane{height:auto;}
+    .pane.editor{border-right:0;border-bottom:1px solid var(--border);}
+    textarea#src{min-height:45vh;}
+    #preview{min-height:30vh;}
+    .tabbar{display:flex;gap:6px;padding:8px 14px;border-bottom:1px solid var(--border);
+      background:var(--bg-elev);}
+    .tabbar .btn{flex:1;text-align:center;}
+    body.mode-edit .pane.preview{display:none;}
+    body.mode-preview .pane.editor{display:none;}
+  }
+</style>
+</head>
+<body class="mode-edit">
+<header>
+  <div class="bar">
+    <div class="logo">📝 Mark<span>down</span></div>
+    <select class="docsel" id="docSel" title="Documents"></select>
+    <button class="btn sm" id="newDoc" title="New document">＋ New</button>
+    <button class="btn sm" id="renDoc" title="Rename document">Rename</button>
+    <button class="btn sm" id="delDoc" title="Delete document">Delete</button>
+    <span class="spacer"></span>
+    <button class="btn sm" id="shareBtn">🔗 Share</button>
+    <button class="btn sm" id="copyHtml">Copy HTML</button>
+    <button class="btn sm primary" id="exportBtn">⬇ Export .md</button>
+  </div>
+</header>
+
+<div class="tabbar">
+  <button class="btn sm" id="tabEdit">Edit</button>
+  <button class="btn sm" id="tabPreview">Preview</button>
+</div>
+
+<main>
+  <section class="pane editor">
+    <div class="panehead">Markdown<span class="count" id="count">0 words · 0 chars</span></div>
+    <textarea id="src" spellcheck="false" placeholder="# Hello&#10;&#10;Type **Markdown** here…"></textarea>
+  </section>
+  <section class="pane preview">
+    <div class="panehead">Preview</div>
+    <div id="preview"></div>
+  </section>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+/* ---------- Markdown renderer (pure inline JS, no libraries) ----------
+   HTML in the source is escaped FIRST, so rendered output can never inject
+   scripts. Only http/https/relative/mailto links are emitted. */
+
+function escapeHtml(s){
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Allow only safe href schemes. Operates on an already HTML-escaped string.
+function safeUrl(url){
+  var u = url.trim();
+  // strip surrounding angle brackets if author used <url>
+  if(u.charAt(0)==='<' && u.charAt(u.length-1)==='>') u = u.slice(1,-1).trim();
+  // decode &amp; for the scheme test only
+  var test = u.replace(/&amp;/g,'&');
+  if(/^[a-zA-Z][a-zA-Z0-9+.\-]*:/.test(test)){
+    // has a scheme — must be http/https/mailto
+    if(!/^(https?:|mailto:)/i.test(test)) return '';
+  } else if(/^\s*javascript/i.test(test)){
+    return '';
+  }
+  // relative URLs and anchors are allowed as-is
+  return u.replace(/"/g,'%22');
+}
+
+// Inline-level transforms applied to already-escaped text.
+function inline(text){
+  // images: ![alt](url)
+  text = text.replace(/!\[([^\]]*)\]\(([^)\s]+(?:\s+"[^"]*")?)\)/g, function(m, alt, url){
+    var parts = url.match(/^(\S+)(?:\s+"([^"]*)")?$/);
+    var href = safeUrl(parts ? parts[1] : url);
+    if(!href) return m;
+    var title = parts && parts[2] ? ' title="'+parts[2]+'"' : '';
+    return '<img src="'+href+'" alt="'+alt+'"'+title+'>';
+  });
+  // links: [text](url)
+  text = text.replace(/\[([^\]]+)\]\(([^)\s]+(?:\s+"[^"]*")?)\)/g, function(m, label, url){
+    var parts = url.match(/^(\S+)(?:\s+"([^"]*)")?$/);
+    var href = safeUrl(parts ? parts[1] : url);
+    if(!href) return m;
+    var title = parts && parts[2] ? ' title="'+parts[2]+'"' : '';
+    return '<a href="'+href+'"'+title+' rel="noopener noreferrer">'+label+'</a>';
+  });
+  // inline code: `code`  (protect from other inline rules by handling first-ish)
+  text = text.replace(/`([^`]+)`/g, function(m, code){ return '<code>'+code+'</code>'; });
+  // bold **x** or __x__
+  text = text.replace(/\*\*([^\s*][^*]*?)\*\*/g, '<strong>$1</strong>');
+  text = text.replace(/__([^\s_][^_]*?)__/g, '<strong>$1</strong>');
+  // italic *x* or _x_
+  text = text.replace(/(^|[^*])\*([^\s*][^*]*?)\*/g, '$1<em>$2</em>');
+  text = text.replace(/(^|[^_])_([^\s_][^_]*?)_/g, '$1<em>$2</em>');
+  // hard line break: two trailing spaces
+  text = text.replace(/  \n/g, '<br>\n');
+  return text;
+}
+
+// Build nested list HTML from a run of list lines.
+function renderList(lines){
+  // lines: array of raw (escaped) source lines that belong to a list block
+  // Determine list type per item by indentation; supports one+ nesting level.
+  var out = '';
+  var i = 0;
+  function parse(indent){
+    var html = '';
+    var type = null;
+    while(i < lines.length){
+      var line = lines[i];
+      var m = line.match(/^(\s*)([-*+]|\d+[.)])\s+(.*)$/);
+      if(!m) break;
+      var ind = m[1].replace(/\t/g,'    ').length;
+      if(ind < indent) break;
+      if(ind > indent){
+        // deeper list: attach to previous item
+        var sub = parse(ind);
+        // splice the sub-list before the closing </li> of last item
+        html = html.replace(/<\/li>$/, sub + '</li>');
+        continue;
+      }
+      var thisType = /^\d/.test(m[2]) ? 'ol' : 'ul';
+      if(type === null) type = thisType;
+      i++;
+      html += '<li>' + inline(m[3]) + '</li>';
+    }
+    if(type === null) return '';
+    return '<' + type + '>' + html + '</' + type + '>';
+  }
+  out = parse(0);
+  return out;
+}
+
+function render(srcRaw){
+  var src = escapeHtml(srcRaw.replace(/\r\n?/g, '\n'));
+  var lines = src.split('\n');
+  var html = '';
+  var i = 0;
+
+  while(i < lines.length){
+    var line = lines[i];
+
+    // fenced code block
+    var fence = line.match(/^(```+|~~~+)\s*([^\s`~]*)/);
+    if(fence){
+      var marker = fence[1].charAt(0);
+      var body = [];
+      i++;
+      while(i < lines.length && !new RegExp('^' + (marker==='`'?'```':'~~~') + '+\\s*$').test(lines[i])){
+        body.push(lines[i]); i++;
+      }
+      i++; // skip closing fence
+      var lang = fence[2] ? ' data-lang="'+fence[2]+'"' : '';
+      html += '<pre><code'+lang+'>' + body.join('\n') + '</code></pre>';
+      continue;
+    }
+
+    // horizontal rule
+    if(/^\s*([-*_])(\s*\1){2,}\s*$/.test(line)){
+      html += '<hr>'; i++; continue;
+    }
+
+    // ATX heading
+    var h = line.match(/^(#{1,6})\s+(.*?)\s*#*\s*$/);
+    if(h){
+      var lvl = h[1].length;
+      html += '<h'+lvl+'>' + inline(h[2]) + '</h'+lvl+'>';
+      i++; continue;
+    }
+
+    // blockquote (consume consecutive > lines)
+    if(/^\s*>/.test(line)){
+      var q = [];
+      while(i < lines.length && /^\s*>/.test(lines[i])){
+        q.push(lines[i].replace(/^\s*>\s?/, '')); i++;
+      }
+      html += '<blockquote>' + render(q.join('\n')) + '</blockquote>';
+      continue;
+    }
+
+    // list block (consume consecutive list lines incl. indented continuations)
+    if(/^\s*([-*+]|\d+[.)])\s+/.test(line)){
+      var lst = [];
+      while(i < lines.length && (/^\s*([-*+]|\d+[.)])\s+/.test(lines[i]) || (/^\s+\S/.test(lines[i]) && lst.length))){
+        lst.push(lines[i]); i++;
+      }
+      html += renderList(lst);
+      continue;
+    }
+
+    // blank line
+    if(/^\s*$/.test(line)){ i++; continue; }
+
+    // paragraph: gather until blank or block start
+    var para = [];
+    while(i < lines.length && !/^\s*$/.test(lines[i])
+          && !/^(```+|~~~+)/.test(lines[i])
+          && !/^\s*>/.test(lines[i])
+          && !/^#{1,6}\s+/.test(lines[i])
+          && !/^\s*([-*+]|\d+[.)])\s+/.test(lines[i])
+          && !/^\s*([-*_])(\s*\1){2,}\s*$/.test(lines[i])){
+      para.push(lines[i]); i++;
+    }
+    if(para.length){
+      html += '<p>' + inline(para.join('\n')).replace(/\n/g, '<br>\n') + '</p>';
+    }
+  }
+  return html;
+}
+
+/* ---------- App state: multiple named docs in localStorage ---------- */
+
+var LS_KEY = 'markdown.docs.v1';
+var LS_CUR = 'markdown.current.v1';
+
+function loadDocs(){
+  try{
+    var d = JSON.parse(localStorage.getItem(LS_KEY) || 'null');
+    if(d && typeof d === 'object' && Object.keys(d).length) return d;
+  }catch(e){}
+  return { 'Untitled': '# Welcome to the Markdown Scratchpad\n\nStart typing on the left — the preview updates live.\n\n- Autosaved to your browser\n- **Share** encodes the whole doc in the URL\n- Export as `.md` any time\n\n```js\nconsole.log("pure inline renderer, no libraries");\n```\n' };
+}
+function saveDocs(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(docs)); }catch(e){} }
+
+var docs = loadDocs();
+var current = localStorage.getItem(LS_CUR);
+if(!current || !(current in docs)) current = Object.keys(docs)[0];
+
+var srcEl = document.getElementById('src');
+var prevEl = document.getElementById('preview');
+var countEl = document.getElementById('count');
+var selEl = document.getElementById('docSel');
+
+function refreshSelect(){
+  selEl.innerHTML = '';
+  Object.keys(docs).forEach(function(name){
+    var o = document.createElement('option');
+    o.value = name; o.textContent = name;
+    if(name === current) o.selected = true;
+    selEl.appendChild(o);
+  });
+}
+
+function updatePreview(){
+  var txt = srcEl.value;
+  prevEl.innerHTML = txt.trim() ? render(txt) : '<p class="empty">Nothing to preview yet.</p>';
+  var words = (txt.trim().match(/\S+/g) || []).length;
+  countEl.textContent = words + (words===1?' word · ':' words · ') + txt.length + ' chars';
+}
+
+var saveTimer = null;
+function scheduleSave(){
+  if(saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(function(){
+    docs[current] = srcEl.value;
+    saveDocs();
+  }, 400);
+}
+
+function loadCurrent(){
+  srcEl.value = docs[current] || '';
+  localStorage.setItem(LS_CUR, current);
+  updatePreview();
+}
+
+srcEl.addEventListener('input', function(){
+  updatePreview();
+  scheduleSave();
+});
+
+/* ---------- Document management ---------- */
+
+selEl.addEventListener('change', function(){
+  // persist whatever is on screen before switching
+  docs[current] = srcEl.value; saveDocs();
+  current = selEl.value;
+  loadCurrent();
+});
+
+document.getElementById('newDoc').addEventListener('click', function(){
+  var name = prompt('New document name:', 'Untitled ' + (Object.keys(docs).length + 1));
+  if(!name) return;
+  name = name.trim(); if(!name) return;
+  if(name in docs){ toast('A document with that name exists'); return; }
+  docs[current] = srcEl.value;
+  docs[name] = '';
+  current = name;
+  saveDocs(); refreshSelect(); loadCurrent();
+  srcEl.focus();
+});
+
+document.getElementById('renDoc').addEventListener('click', function(){
+  var name = prompt('Rename document:', current);
+  if(!name) return;
+  name = name.trim(); if(!name || name === current) return;
+  if(name in docs){ toast('A document with that name exists'); return; }
+  docs[current] = srcEl.value;
+  docs[name] = docs[current];
+  delete docs[current];
+  current = name;
+  saveDocs(); refreshSelect(); loadCurrent();
+});
+
+document.getElementById('delDoc').addEventListener('click', function(){
+  if(Object.keys(docs).length <= 1){ toast('Can’t delete the last document'); return; }
+  if(!confirm('Delete “' + current + '”?')) return;
+  delete docs[current];
+  current = Object.keys(docs)[0];
+  saveDocs(); refreshSelect(); loadCurrent();
+});
+
+/* ---------- Export / Copy HTML / Share ---------- */
+
+document.getElementById('exportBtn').addEventListener('click', function(){
+  var blob = new Blob([srcEl.value], { type: 'text/markdown;charset=utf-8' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = (current.replace(/[^\w.\-]+/g, '_') || 'document') + '.md';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+});
+
+document.getElementById('copyHtml').addEventListener('click', function(){
+  copyText(render(srcEl.value), 'HTML copied');
+});
+
+document.getElementById('shareBtn').addEventListener('click', function(){
+  // base64 of UTF-8, then strip to make it URL-safe enough for a hash
+  var b64 = btoa(unescape(encodeURIComponent(srcEl.value)));
+  var url = location.origin + location.pathname + location.search + '#doc=' + encodeURIComponent(b64);
+  copyText(url, 'Share link copied');
+});
+
+/* ---------- URL-hash sharing: decode on load ---------- */
+
+function loadFromHash(){
+  var h = location.hash || '';
+  var m = h.match(/[#&]doc=([^&]+)/);
+  if(!m) return false;
+  try{
+    var b64 = decodeURIComponent(m[1]);
+    var text = decodeURIComponent(escape(atob(b64)));
+    var name = 'Shared ' + new Date().toLocaleString();
+    docs[name] = text;
+    current = name;
+    saveDocs(); refreshSelect();
+    // clean the hash from the address bar
+    history.replaceState(null, '', location.pathname + location.search);
+    return true;
+  }catch(e){ return false; }
+}
+
+/* ---------- helpers ---------- */
+
+var toastEl = document.getElementById('toast');
+var toastTimer = null;
+function toast(msg){
+  toastEl.textContent = msg; toastEl.classList.add('show');
+  if(toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ toastEl.classList.remove('show'); }, 1800);
+}
+
+function copyText(text, okMsg){
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(function(){ toast(okMsg); }, fallback);
+  } else { fallback(); }
+  function fallback(){
+    var ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try{ document.execCommand('copy'); toast(okMsg); }catch(e){ toast('Copy failed'); }
+    document.body.removeChild(ta);
+  }
+}
+
+/* mobile edit/preview toggle */
+document.getElementById('tabEdit').addEventListener('click', function(){
+  document.body.classList.remove('mode-preview'); document.body.classList.add('mode-edit');
+});
+document.getElementById('tabPreview').addEventListener('click', function(){
+  updatePreview();
+  document.body.classList.remove('mode-edit'); document.body.classList.add('mode-preview');
+});
+
+// Tab key inserts a tab in the textarea instead of moving focus
+srcEl.addEventListener('keydown', function(e){
+  if(e.key === 'Tab'){
+    e.preventDefault();
+    var s = srcEl.selectionStart, en = srcEl.selectionEnd;
+    srcEl.value = srcEl.value.slice(0, s) + '  ' + srcEl.value.slice(en);
+    srcEl.selectionStart = srcEl.selectionEnd = s + 2;
+    updatePreview(); scheduleSave();
+  }
+});
+
+/* ---------- init ---------- */
+loadFromHash();
+refreshSelect();
+loadCurrent();
+</script>
+</body>
+</html>

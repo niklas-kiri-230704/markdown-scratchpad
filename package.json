@@ -1,0 +1,10 @@
+{
+  "name": "markdown",
+  "version": "1.0.0",
+  "description": "Self-contained Markdown scratchpad with live preview and an inline pure-JS renderer (single-file, no deps)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "private": true
+}
